@@ -1,0 +1,75 @@
+import praw
+import time
+import daytime
+import pyteaser
+
+
+toadd = []
+
+submissions_limit = 100
+thresh_max = 500
+thresh_min = 10
+username = raw_input("enter username: ")
+password = raw_input("enter password: ")
+comments_per_run = 15 # modify this as much as you like; it will print in your console
+sentences_per_summary = 3 # it will print to summaries.txt in the same directory. None will happen if the file is not there
+subreddits = raw_input("enter subreddits in this style: academicphilosophy+denverlist+etc: ")
+agent = raw_input("enter your username again, but like u/username: ") # this is like a captcha, only not really
+filestore = "done.txt" #make sure these two files are empty .txt's when you run it. 
+filestore2 = "summaries.txt"
+
+
+def main():
+    submissions = getSubmissions()
+    done = getDone()
+    counts = 0 # how many comments made this round
+
+    for submission in submissions:
+        if counts>=comments_per_run:
+             break
+        id = submission.id
+        point = submission.ups - submission.downs
+        if id not in done and point<thresh_max and point>thresh_min:
+            putDone(submission.id)
+            sentences = pyteaser.SummarizeUrl(submission.url)
+            if (sentences !=None):
+                counts +=1
+                record = alchemyprepare(sentences, submission)
+
+            writeDone(sentences)
+#	counts+=1
+#	comment = writeDone(sentences, submission)
+# add to comment to submission
+#submission.add_comment(comment);
+# print in reddit
+#print(comment)
+
+def getDone():
+# open file, check to see if id has been proccessed before
+    with open(filestore) as f:
+        return f.read().splitlines()
+
+def putDone(id):
+# writes to filestore urls on separate lines
+    with open(filestore, "a") as text_file:
+        text_file.write(id+"\n")
+
+##TO DO: send sentences to alchemyapi
+def writeDone(sentences):
+    with open(filestore2, "a") as f:
+        to_write = str(sentences)
+        f.write(to_write+"\n")
+
+def getSubmissions():
+# python reddit api wrapper (see doc)
+    r = praw.Reddit(user_agent=agent)
+    r.login(username, password)
+    return r.get_subreddit(subreddits).get_hot(limit=1000)
+
+def alchemyprepare(sentences, submission):
+	#preparing to add api's to this 
+    print (submission.title+": "+submission.url)
+    # add variable get that equates to get sentiment or alchemy stuff
+
+if __name__ == "__main__":
+    main()
